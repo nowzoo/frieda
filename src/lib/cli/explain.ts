@@ -41,15 +41,9 @@ import { getModelTypeDeclarations } from '$lib/generate/get-model-type-declarati
 type ModelNextStep =
   | 'fieldTypes'
   | 'createTable'
-  | 'modelBaseType'
-  | 'modelPrimaryKeyType'
-  | 'modelCreateType'
-  | 'modelUpdateType'
-  | 'modelFindUniqueType'
+  | 'modelTypes'
   | 'showAnotherModel'
-  | 'typeOptions'
-  | 'quickstart'
-  | 'exit';
+  | 'back';
 export class Explainer {
   private modelNextStep: ModelNextStep | null = null;
   constructor(
@@ -66,12 +60,12 @@ export class Explainer {
     const nextStep = await prompt<'done' | 'models' | 'typeOptions' | 'quick'>({
       type: 'select',
       name: 'next',
-      message: 'More?',
+      message: 'Show',
       choices: [
         { title: 'Explore models', value: 'models' },
         { title: 'Show type options', value: 'typeOptions' },
         { title: 'Show quick start', value: 'quick' },
-        { title: '👋 No, done.', value: 'done' }
+        { title: 'Exit →', value: 'done' }
       ]
     });
     console.log();
@@ -191,44 +185,23 @@ export class Explainer {
       },
 
       {
-        title: `Model Type`,
-        value: 'modelBaseType'
+        title: `Model Types`,
+        value: 'modelTypes'
       },
-      {
-        title: `Primary Key Type`,
-        value: 'modelPrimaryKeyType'
-      },
-      {
-        title: `Create Data Type`,
-        value: 'modelCreateType'
-      },
-      {
-        title: `Update Data Type`,
-        value: 'modelUpdateType'
-      },
-      {
-        title: `Find Unique Type`,
-        value: 'modelFindUniqueType'
-      },
+     
       {
         title: `CREATE TABLE`,
         value: 'createTable'
       },
       {
-        title: `↑ Different model`,
+        title: `↑ Choose a different model`,
         value: 'showAnotherModel'
       },
+     
+
       {
-        title: `↑ Current type options`,
-        value: 'typeOptions'
-      },
-      {
-        title: `↑ Quick start code`,
-        value: 'quickstart'
-      },
-      {
-        title: `Exit`,
-        value: 'exit'
+        title: `← Back`,
+        value: 'back'
       }
     ];
     const initial = Math.max(choices.findIndex(c => c.value === this.modelNextStep), 0);
@@ -246,24 +219,8 @@ export class Explainer {
         this.showModelFieldTypes(table);
         console.log();
         return await this.promptModelScreen(table);
-      case 'modelBaseType':
-        this.showModelBaseType(table);
-        console.log();
-        return await this.promptModelScreen(table);
-      case 'modelPrimaryKeyType':
-        this.showModelPrimaryKeyType(table);
-        console.log();
-        return await this.promptModelScreen(table);
-      case 'modelCreateType':
-        this.showModelCreateDataType(table);
-        console.log();
-        return await this.promptModelScreen(table);
-      case 'modelUpdateType':
-        this.showModelUpdateDataType(table);
-        console.log();
-        return await this.promptModelScreen(table);
-      case 'modelFindUniqueType':
-        this.showModelFindUniqueType(table);
+      case 'modelTypes':
+        this.showModelTypes(table);
         console.log();
         return await this.promptModelScreen(table);
       case 'createTable':
@@ -272,10 +229,8 @@ export class Explainer {
         return await this.promptModelScreen(table);
       case 'showAnotherModel':
         return await this.promptModel(table.name);
-      case 'typeOptions':
-        return await this.typeOptionsScreen();
-      case 'quickstart':
-        return await this.quickStartScreen();
+      case 'back':
+        return await this.promptNextStep();
     }
   }
 
@@ -311,8 +266,21 @@ export class Explainer {
     log.footer();
   }
 
+  showModelTypes(table: FetchedTable) {
+    log.header(`Model Types | Model: ${getModelName(table)}`);
+    this.showModelBaseType(table)
+    console.log();
+    this.showModelPrimaryKeyType(table)
+    console.log();
+    this.showModelCreateDataType(table)
+    console.log();
+    this.showModelUpdateDataType(table)
+    console.log();
+    this.showModelFindUniqueType(table);
+    log.footer()
+  }
+
   showModelBaseType(table: FetchedTable) {
-    log.header(`Model Type | Model: ${getModelName(table)}`);
     const typeDecls = getModelTypeDeclarations(table, this.options);
     const notes = table.columns
       .filter(
@@ -342,11 +310,9 @@ export class Explainer {
       ...code,
       ...notes
     ]);
-    log.footer();
   }
 
   showModelPrimaryKeyType(table: FetchedTable) {
-    log.header(`Primary Key Type | Model: ${getModelName(table)}`);
     const typeDecls = getModelTypeDeclarations(table, this.options);
 
     const primaryKeyCode = format(typeDecls.primaryKey, {
@@ -364,11 +330,9 @@ export class Explainer {
         fmtVal(getModelPrimaryKeyTypeName(table)),
       ...primaryKeyCode
     ]);
-    log.footer();
   }
 
   showModelCreateDataType(table: FetchedTable) {
-    log.header(`Create Data Type | Model: ${getModelName(table)}`);
     const typeDecls = getModelTypeDeclarations(table, this.options);
 
     const createDataCode = format(typeDecls.createData, {
@@ -411,11 +375,9 @@ export class Explainer {
       ...createDataCode,
       ...createDataNotes
     ]);
-    log.footer();
   }
 
   showModelUpdateDataType(table: FetchedTable) {
-    log.header(`Update Data Type | Model: ${getModelName(table)}`);
     const typeDecls = getModelTypeDeclarations(table, this.options);
 
     const updateDataCode = format(typeDecls.updateData, {
@@ -456,11 +418,9 @@ export class Explainer {
       ...updateDataCode,
       ...updateDataNotes
     ]);
-    log.footer();
   }
 
   showModelFindUniqueType(table: FetchedTable) {
-    log.header(`Find Unique Type | Model: ${getModelName(table)}`);
     const typeDecls = getModelTypeDeclarations(table, this.options);
     const uniqueCode = format(typeDecls.findUniqueParams, {
       filepath: 'x.ts',
@@ -490,7 +450,6 @@ export class Explainer {
       ...uniqueCode,
       ...uniqueNotes
     ]);
-    log.footer();
   }
 
   showModelCreateSql(table: FetchedTable) {
